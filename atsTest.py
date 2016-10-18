@@ -27,13 +27,13 @@ print(sOp[:,:,5])
 print(sTr[:,5])
 
 Fats = genTensor(sym,r,q)
-#Fm   = xrmsTensor(MS)
+Fm   = xrmsTensor(MS)
 
 #th = calcTh(q, sm227, E)
 #print(2*np.rad2deg(th))
 
-# print(Fats)
-# print(Fm)
+print(Fats)
+print(Fm)
 # T = rotTensor(Q,azir,sm227)
 
 #plotAzi(0*Fats+1.0*Fm,q,azir,sm227,E,n)
