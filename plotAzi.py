@@ -1,9 +1,10 @@
-import numpy as np
 import pylab as pl
 from calcTh import calcTh
-from calcAbs import calcAbs
+
+from core.calcAbs import calcAbs
+from core.sigpiBasis import sigpiBasis
 from rotTensor import *
-from sigpiBasis import sigpiBasis
+
 
 def plotAzi(F,Q,azir,lat,E,n):
     psi = np.arange(0,360,1)
@@ -26,7 +27,7 @@ def plotAzi(F,Q,azir,lat,E,n):
 
     pl.plot(psi,absorb*Isp, '-b', label='$\sigma-\pi$')
     pl.plot(psi,absorb*Iss, '-r', label='$\sigma-\sigma$')
-    pl.plot(psi, absorb * (Iss+Isp), '-k', label='Total')
+    pl.plot(psi,absorb * (Iss+Isp), '-k', label='Total')
     pl.title('Q = ' + str(Q) +', $\psi_0$ = ' + str(azir))
     pl.xlim([0,360])
     pl.xlabel('$\psi$ (deg)')
