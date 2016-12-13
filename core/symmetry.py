@@ -1,3 +1,4 @@
+import os
 import numpy as np
 
 class Symmetry(object):
@@ -43,7 +44,9 @@ class Symmetry(object):
 
     # read in spacegoup generators from file
     def genSym(self,sym):
-        f = open('dat_files/symmetry.dat')
+        fn = os.path.join(os.path.dirname(__file__),'dat_files'+os.sep+'symmetry.dat')
+        f = open(fn,'r')
+
         for line in f:
             if sym in line:
                 symStr = line[19:]
@@ -51,8 +54,8 @@ class Symmetry(object):
         f.close()
 
         vNew = np.zeros(3)
-        symOp = np.zeros(shape=(3, 3, 30))
-        symTr = np.zeros(shape=(3, 30))
+        symOp = np.zeros(shape=(3, 3, 20))
+        symTr = np.zeros(shape=(3, 20))
         nNew = 0
         nOp = 0
         nSign = 1
@@ -86,8 +89,8 @@ class Symmetry(object):
             j += 1
 
         symOp[nNew, :, nOp] = vNew
-        symOp = symOp[:, :, 0:nOp + 1]
-        symTr = symTr[:, 0:nOp + 1]
+        symOp = symOp[:, :, 0:nOp+1]
+        symTr = symTr[:, 0:nOp+1]
         return symOp, symTr, symStr
 
     # determine order of symmetry operator
@@ -115,23 +118,36 @@ class Symmetry(object):
         return rPos, isMoved
 
     # return point group symmetry operations
-    def pointSym(self,sym, r):
-        _, isMoved = self.genPos(sym, r)
+    def pointSym(self, r):
+        _, isMoved = self.genPos(r)
 
         opArray = np.asarray(self.symOp)
         pointOp = opArray[np.logical_not(isMoved)]
 
         return pointOp
 
-    # generate scattering tensor for r, Q
+    # generate ATS scattering tensor for r, Q
     # TODO: Modify for multiple sites r
-    def genTensor(self, r, Q):
+    # check input of r, then act accordingly
+    def genTensor(self, r, q):
         anisoT = np.ones(shape=(3, 3)) - np.identity(3)
-        Fk = np.zeros(shape=(3,3), dtype='complex128')
 
-        for i in range(0, len(self.symOp)):
-                Fk += np.dot(self.symOp[i], np.dot(anisoT, self.symOp[i].T)) \
-                      * np.exp(2j * np.pi * np.dot(Q, (self.symTr[i] + np.dot(self.symOp[i], r))))
+        # Not sure if this actually works!
+        if (isinstance(r[0], list)):
+            for i, rc in enumerate(r):
+                b = np.exp(2j * np.pi * np.einsum('i,ji->j', q, (self.symTr + np.dot(self.symOp, rc))))
+        else:
+            b = np.exp(2j * np.pi * np.einsum('i,ji->j', q, (self.symTr + np.dot(self.symOp, r))))
+
+        a = np.einsum('mij,jk,mlk->mil', self.symOp, anisoT, self.symOp)
+        Fk = np.einsum('ijk,i->jk', a, b)
+
+        # --- slower for loop method that does the same --- #
+        # Fk     = np.zeros(shape=(3,3), dtype='complex128')
+        #for i in range(0, len(self.symOp)):
+        #        Fk += np.dot(self.symOp[i], np.dot(anisoT, self.symOp[i].T)) \
+        #            * np.exp(2j * np.pi * np.dot(Q, (self.symTr[i] + np.dot(self.symOp[i], r))))
+
         self.chop(Fk)
         norm = Fk.sum() / 2
 

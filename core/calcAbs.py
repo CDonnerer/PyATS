@@ -1,4 +1,3 @@
-from calcTh import calcTh
 from rotTensor import *
 import numpy as np
 

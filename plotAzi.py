@@ -1,8 +1,8 @@
 import pylab as pl
 from calcTh import calcTh
+from cores.sigpiBasis import sigpiBasis
 
 from core.calcAbs import calcAbs
-from core.sigpiBasis import sigpiBasis
 from rotTensor import *
 
 
