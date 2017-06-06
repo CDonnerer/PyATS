@@ -1,22 +1,25 @@
 import numpy as np
-import os
-import pylab as pl
 from core.diffract import Diffract
 from core.symmetry import Symmetry
-from core.atom import Atom
+from core.atom     import Atom
 
 class Lattice(object):
     def __init__(self, pars, sym):
-        self.alpha = np.deg2rad(90)
-        self.beta  = np.deg2rad(90)
-        self.gamma = np.deg2rad(90)
-        self.sym   = sym
+        """
+        Lattice object
+
+        :param pars: [a,b,c,alpha,beta,gamma] (Angstrom & degrees)
+        :param sym: spacegroup symmetry as 'F d -3 m' or 227
+        """
+        self.sym      = sym
         self.atom     = []
         self.Symmetry = None
         self.diffract = None
-
         self.genSymmetry()
 
+        self.alpha = np.deg2rad(90)
+        self.beta  = np.deg2rad(90)
+        self.gamma = np.deg2rad(90)
         if len(pars)==1:
             self.a=pars[0]
             self.b=self.a
@@ -58,25 +61,25 @@ class Lattice(object):
 
         :param r: position of resonant atom
         :param q: scattering vctor
-        :return: ATS Tensor
+        :return: 3x3 ATS Tensor
 
         """
         if self.Symmetry == None:
             self.genSymmetry()
         return self.Symmetry.genTensor(r,q)
 
+    def xrmsTensor(self, M):
+        """
+        XRMS tensor in spherical approximation (Hannon et al.)
+
+        :param M: magnetic structure factor (vector)
+        :return:  3x3 XRMS Tensor
+        """
+        Fm = 1j * np.array([[0, M[2], -M[1]], [-M[2], 0, M[0]], [M[1], -M[0], 0]])
+        return Fm
+
     def addAtom(self, element, r):
-        fn = os.path.join(os.path.dirname(__file__),'dat_files'+os.sep+'atom.dat')
-        f = open(fn,'r')
-
-        Z = 0
-        for line in f:
-            Z += 1
-            if element in line[0:2]:
-                break
-        f.close()
         rPos, _ = self.Symmetry.genPos(r)
-
         self.atom.append(Atom(element,r,rPos))
 
     def qMult(self,q):
@@ -87,6 +90,12 @@ class Lattice(object):
         return m, qEqv
 
     def genSF(self, Q):
+        """
+        Generate atomic structure factor for each atom
+
+        :param Q: wavevector
+        :return F: structure factor array
+        """
         if(np.sum(Q)==0):
             return None
         F = np.zeros(len(self.atom),'complex128')
@@ -100,3 +109,26 @@ class Lattice(object):
         b=complex(a.real[abs(a.real) > tol] or 0,
                   a.imag[abs(a.imag) > tol] or 0)
         return b
+
+    def recipLattice(self):
+        V = 2.0 * self.a *self.b * self.b * np.sqrt(
+                1 - np.cos(self.alpha)**2 - np.cos(self.beta)**2 - np.cos(self.gamma)**2
+                + 2 * np.cos(self.alpha) * np.cos(self.beta) * np.cos(self.gamma))
+
+        self.aStar = 2.0 / V * np.pi * self.b * self.c * np.sin(self.alpha)
+        self.bStar = 2.0 / V * np.pi * self.a * self.c * np.sin(self.beta)
+        self.cStar = 2.0 / V * np.pi * self.a * self.b * np.sin(self.gamma)
+
+        self.alphaStar = 0.5* np.pi # np.arccos()
+        self.betaStar  = 0.5* np.pi #
+        self.gammaStar = 0.5* np.pi #
+
+        return [self.aStar,self.bStar,self.cStar,self.alphaStar,self.betaStar,self.gammaStar]
+
+#    def changeOfBasis(self):
+
+
+    def angle(self,hkl1,hkl2):
+        orthoRecip = np.array([[self.a,0,0],[0,self.b,0],[0,0,self.c]])
+
+        p1 = np.dot(orthoRecip,hkl1)

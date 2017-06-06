@@ -6,8 +6,13 @@ class Symmetry(object):
         self.sym = sym
         self.symOp, self.symTr = self.genOp(sym)
 
-    # generate spacegroup symmetry operations
     def genOp(self,sym):
+        """
+        Generate spacegroup symmetry operations
+
+        :param sym:
+        :return: symOp, symTr:
+        """
         tol = 1e-5
         gener, trans, symStr = self.genSym(sym)
 
@@ -42,8 +47,13 @@ class Symmetry(object):
                         symOp.append(RS)
         return symOp, symTr
 
-    # read in spacegoup generators from file
     def genSym(self,sym):
+        """
+        Read in spacegoup generators from file
+
+        :param sym:
+        :return: symOp, symTr, symStr:
+        """
         fn = os.path.join(os.path.dirname(__file__),'dat_files'+os.sep+'symmetry.dat')
         f = open(fn,'r')
 
@@ -93,11 +103,17 @@ class Symmetry(object):
         symTr = symTr[:, 0:nOp+1]
         return symOp, symTr, symStr
 
-    # determine order of symmetry operator
     def symOrder(self,R, T):
+        """
+        Determine order of symmetry operator
+
+        :param R:
+        :param T:
+        :return:
+        """
         tol = 1e-5
 
-        N = 1
+        N  = 1
         RN = R
         TN = T
 
@@ -108,8 +124,13 @@ class Symmetry(object):
 
         return N
 
-    # generate symmetry-equivalent positions
     def genPos(self, r):
+        """
+        Generate symmetry-equivalent positions
+
+        :param r:
+        :return: rPos, isMoved:
+        """
         rTemp = (np.dot(self.symOp, r) + self.symTr) % 1
         rPos = np.vstack({tuple(row) for row in rTemp})
 
@@ -117,8 +138,13 @@ class Symmetry(object):
 
         return rPos, isMoved
 
-    # return point group symmetry operations
     def pointSym(self, r):
+        """
+        Generate point group symmetry operations
+
+        :param r:
+        :return: pointOp:
+        """
         _, isMoved = self.genPos(r)
 
         opArray = np.asarray(self.symOp)
@@ -126,41 +152,40 @@ class Symmetry(object):
 
         return pointOp
 
-    # generate ATS scattering tensor for r, Q
-    # TODO: Modify for multiple sites r
-    # check input of r, then act accordingly
     def genTensor(self, r, q):
+        """
+        Generate ATS scattering tensor
+
+        :param r: site of absorbing atom
+        :param q: momentum transfer
+        :return: 3x3 scattering tensor
+        """
+
         anisoT = np.ones(shape=(3, 3)) - np.identity(3)
 
-        # Not sure if this actually works!
-        if (isinstance(r[0], list)):
-            for i, rc in enumerate(r):
-                b = np.exp(2j * np.pi * np.einsum('i,ji->j', q, (self.symTr + np.dot(self.symOp, rc))))
-        else:
-            b = np.exp(2j * np.pi * np.einsum('i,ji->j', q, (self.symTr + np.dot(self.symOp, r))))
-
+        b = np.exp(2j * np.pi * np.einsum('i,ji->j', q, (self.symTr + np.dot(self.symOp, r))))
         a = np.einsum('mij,jk,mlk->mil', self.symOp, anisoT, self.symOp)
         Fk = np.einsum('ijk,i->jk', a, b)
-
-        # --- slower for loop method that does the same --- #
-        # Fk     = np.zeros(shape=(3,3), dtype='complex128')
-        #for i in range(0, len(self.symOp)):
-        #        Fk += np.dot(self.symOp[i], np.dot(anisoT, self.symOp[i].T)) \
-        #            * np.exp(2j * np.pi * np.dot(Q, (self.symTr[i] + np.dot(self.symOp[i], r))))
 
         self.chop(Fk)
         norm = Fk.sum() / 2
 
+        # Check if tensor is non-zero
         with np.warnings.catch_warnings():
             np.warnings.filterwarnings('error')
             try:
                 return Fk / norm
             except:
-                print('Reflection Q = (', Q[0], Q[1], Q[2],') is not ATS allowed!')
+                print('Reflection Q = (', q[0], q[1], q[2],') is not ATS allowed!')
                 return None
 
-    # helper function to get rid of numerical errors
     def chop(self,a):
+        """
+        Helper function to get rid of numerical errors
+
+        :param a:
+        :return:
+        """
         tol = 1e-8
         a.real[abs(a.real) < tol] = 0
         a.imag[abs(a.imag) < tol] = 0
