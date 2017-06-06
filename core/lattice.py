@@ -6,7 +6,7 @@ from core.atom     import Atom
 class Lattice(object):
     def __init__(self, pars, sym):
         """
-        Lattice object
+        Construct Lattice object
 
         :param pars: [a,b,c,alpha,beta,gamma] (Angstrom & degrees)
         :param sym: spacegroup symmetry as 'F d -3 m' or 227
@@ -119,16 +119,13 @@ class Lattice(object):
         self.bStar = 2.0 / V * np.pi * self.a * self.c * np.sin(self.beta)
         self.cStar = 2.0 / V * np.pi * self.a * self.b * np.sin(self.gamma)
 
-        self.alphaStar = 0.5* np.pi # np.arccos()
-        self.betaStar  = 0.5* np.pi #
-        self.gammaStar = 0.5* np.pi #
+        self.alphaStar = 0.5* np.pi
+        self.betaStar  = 0.5* np.pi
+        self.gammaStar = 0.5* np.pi
 
         return [self.aStar,self.bStar,self.cStar,self.alphaStar,self.betaStar,self.gammaStar]
-
-#    def changeOfBasis(self):
 
 
     def angle(self,hkl1,hkl2):
         orthoRecip = np.array([[self.a,0,0],[0,self.b,0],[0,0,self.c]])
-
         p1 = np.dot(orthoRecip,hkl1)

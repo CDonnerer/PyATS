@@ -14,8 +14,13 @@ class Diffract(object):
         self.azir   = aziref
         self.absorb = absorb
 
-    # computes tensor that projects crystal frame onto diffraction frame
     def orientate(self, Q):
+        """
+        computes tensor that projects crystal frame onto diffraction frame
+
+        :param Q:
+        :return:
+        """
         Q = np.asarray(Q) / np.asarray([self.lat.a,self.lat.b,self.lat.c])
         Qnorm = Q / np.linalg.norm(Q)
 
@@ -30,7 +35,7 @@ class Diffract(object):
                       [-np.cos(zeta) * np.sin(eta),-np.cos(eta), -np.sin(zeta) * np.sin(eta)]])
 
         az = np.dot(T, self.azir)
-        psi = np.arctan2(-az[1], az[0]) # TODO this seems to off by 180 degrees. please check
+        psi = np.arctan2(-az[1], az[0])
         Ru3 = np.array([[np.cos(psi), -np.sin(psi), 0], [np.sin(psi), np.cos(psi), 0], [0, 0, 1]])
 
         return np.dot(Ru3, T)
@@ -83,9 +88,6 @@ class Diffract(object):
         T = self.orientate(Q)   # crystal orienation in diffraction frame
         a = np.dot(T,self.n)
         delta = np.zeros(len(psi))
-        #npsi = a * psi[:, None]
-        #n = diffVector(n, Q, azir, lat)  # n in lab frame at psi=0
-        #   npsi = np.zeros(3)
 
         for i in range(0, len(psi)):
             npsi = np.dot(self.rotZ(psi[i]), a)
@@ -134,30 +136,15 @@ class Diffract(object):
 
         pl.plot(psi, np.abs(Fs)**2, '-b')
         pl.plot(psi, np.abs(Fp)**2, '-r')
+
+        pl.title('Q = ' + str(Q) + ', $\psi_0$ = ' + str(self.azir))
+        pl.xlabel('$\psi$ (deg)')
+        pl.ylabel('Intensity (arb. u.)')
         pl.show()
-
-        # #for i, x in enumerate(psi):
-        # #    Fsp[i, :, :] = sigpiBasis(diffT, x , th)
-        # #    #Iss[i] = absCorr[i]*abs(Fsp[i, 0, 0] * np.conjugate(Fsp[i, 0, 0]))
-        # #    Isp[i]  = absCorr[i]*abs(Fsp[i, 1, 0] * np.conjugate(Fsp[i, 1, 0]))
-        # #    Iss[i]  = 1*abs(Fsp[i, 1, 0] * np.conjugate(Fsp[i, 1, 0]))
-        # #    diff[i] = Isp[i] - Iss[i]
-        # #
-        # pl.plot(psi, Fs*np.conjugate(Fp), '-r', label='$\sigma-\sigma$')
-        # #pl.plot(psi, diff, '-k', label='difference')
-        # pl.title('Q = ' + str(Q) +', $\psi_0$ = ' + str(self.azir))
-        # pl.xlim([0,360])
-        # pl.xlabel('$\psi$ (deg)')
-        # pl.ylabel('Intensity (arb. u.)')
-        # pl.show()
-
-
-
-
-
 
 
     # ----- Powder diffraction ----- #
+    # Experimental!
 
     def genReflections(self,n):
         tol = 1e-8

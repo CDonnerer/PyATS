@@ -4,8 +4,14 @@ import numpy as np
 
 class Atom(object):
     def __init__(self, element, wpos, rpos):
+        """
+
+        :param element: Periodic symbol
+        :param wpos:    Wyckoff position
+        :param rpos:    Symmetry-equivalent positions
+        """
         self.element = element
-        self.wpos = wpos  # but any single pos of rpos could be Wyckoff pos?
+        self.wpos = wpos
         self.pos  = rpos
         self.a, self.b, self.c = self.readFF()  # form factor
 
