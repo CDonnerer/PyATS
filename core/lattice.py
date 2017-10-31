@@ -15,7 +15,7 @@ class Lattice(object):
         self.atom     = []
         self.Symmetry = None
         self.diffract = None
-        self.genSymmetry()
+        self.generate_symmetry()
 
         self.alpha = np.deg2rad(90)
         self.beta  = np.deg2rad(90)
@@ -48,14 +48,14 @@ class Lattice(object):
         return s
 
     # Attach symmetry to lattice
-    def genSymmetry(self):
+    def generate_symmetry(self):
         self.Symmetry = Symmetry(self.sym)
 
     # Attach diffraction to lattice
     def diffraction(self, energy, polarization=[1,0], surface=None, aziref=[0,1,0], absorb=False):
         self.diffract = Diffract(self, energy, polarization, surface, aziref, absorb)
 
-    def genTensor(self,r,q):
+    def generate_tensor(self,r,q):
         """
         ATS tensor (wrapped from symmetry class)
 
@@ -65,10 +65,10 @@ class Lattice(object):
 
         """
         if self.Symmetry == None:
-            self.genSymmetry()
-        return self.Symmetry.genTensor(r,q)
+            self.generate_symmetry()
+        return self.Symmetry.generate_tensor(r,q)
 
-    def xrmsTensor(self, M):
+    def xrms_tensor(self, M):
         """
         XRMS tensor in spherical approximation (Hannon et al.)
 
@@ -78,8 +78,8 @@ class Lattice(object):
         Fm = 1j * np.array([[0, M[2], -M[1]], [-M[2], 0, M[0]], [M[1], -M[0], 0]])
         return Fm
 
-    def addAtom(self, element, r):
-        rPos, _ = self.Symmetry.genPos(r)
+    def add_atom(self, element, r):
+        rPos, _ = self.Symmetry.generate_positions(r)
         self.atom.append(Atom(element,r,rPos))
 
     def qMult(self,q):
@@ -89,7 +89,7 @@ class Lattice(object):
 
         return m, qEqv
 
-    def genSF(self, Q):
+    def generate_structure_factor(self, Q):
         """
         Generate atomic structure factor for each atom
 
@@ -104,13 +104,19 @@ class Lattice(object):
             F[i] = self.chop( (np.exp(2j*np.pi*np.einsum('j,ij->i', Q, at.pos))).sum(0) )
         return F
 
+    # helper function to get rid of numerical errors
     def chop(self,a):
         tol = 1e-12
         b=complex(a.real[abs(a.real) > tol] or 0,
                   a.imag[abs(a.imag) > tol] or 0)
         return b
 
-    def recipLattice(self):
+    def reciprocal_lattice(self):
+        """
+        Compute reciprocal lattice.
+
+        :return: list of [ a*,b*,c*,alpha*,beta*,gamma* ]
+        """
         V = 2.0 * self.a *self.b * self.b * np.sqrt(
                 1 - np.cos(self.alpha)**2 - np.cos(self.beta)**2 - np.cos(self.gamma)**2
                 + 2 * np.cos(self.alpha) * np.cos(self.beta) * np.cos(self.gamma))
@@ -125,7 +131,13 @@ class Lattice(object):
 
         return [self.aStar,self.bStar,self.cStar,self.alphaStar,self.betaStar,self.gammaStar]
 
-
     def angle(self,hkl1,hkl2):
+        """
+        Determine angle between two reflections
+
+        :param hkl1:
+        :param hkl2:
+        :return:
+        """
         orthoRecip = np.array([[self.a,0,0],[0,self.b,0],[0,0,self.c]])
         p1 = np.dot(orthoRecip,hkl1)

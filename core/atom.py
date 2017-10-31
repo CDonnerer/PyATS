@@ -1,11 +1,9 @@
 import os
 import numpy as np
 
-
 class Atom(object):
     def __init__(self, element, wpos, rpos):
         """
-
         :param element: Periodic symbol
         :param wpos:    Wyckoff position
         :param rpos:    Symmetry-equivalent positions
@@ -13,14 +11,19 @@ class Atom(object):
         self.element = element
         self.wpos = wpos
         self.pos  = rpos
-        self.a, self.b, self.c = self.readFF()  # form factor
+        self.a, self.b, self.c = self.read_formfactor()  # form factor
 
     def __repr__(self):
         n = len(self.pos)
         s = str(n) + " " + self.element + " at r = " + str(self.wpos)
         return s
 
-    def readFF(self):
+    def read_formfactor(self):
+        """
+        read-in atomic form factor from file
+
+        :return:
+        """
         fn = os.path.join(os.path.dirname(__file__), 'dat_files' + os.sep + 'formfactor.dat')
         f = open(fn, 'r')
 
@@ -42,6 +45,6 @@ class Atom(object):
 
         return a, b, c
 
-    def formfac(self, sinThetaOverLam):
+    def formfactor(self, sinThetaOverLam):
         ff = (self.a * np.exp(-self.b * (sinThetaOverLam ** 2))).sum() + self.c
         return ff

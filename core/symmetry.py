@@ -4,17 +4,18 @@ import numpy as np
 class Symmetry(object):
     def __init__(self, sym):
         self.sym = sym
-        self.symOp, self.symTr = self.genOp(sym)
+        self.symOp, self.symTr = self.generate_operators(sym)
 
-    def genOp(self,sym):
+    def generate_operators(self,sym):
         """
         Generate spacegroup symmetry operations
 
         :param sym:
         :return: symOp, symTr:
         """
+
         tol = 1e-5
-        gener, trans, symStr = self.genSym(sym)
+        gener, trans, symStr = self.generate_symmetry(sym)
 
         nGen = len(gener[1, 1, :])
         symOp = []
@@ -26,7 +27,7 @@ class Symmetry(object):
         for i in range(0, nGen):
             R0 = gener[:, :, i]
             T0 = trans[:, i]
-            P[i] = self.symOrder(R0, T0)
+            P[i] = self.symmetry_order(R0, T0)
 
             R = np.identity(3)
             T = np.zeros(3)
@@ -47,7 +48,7 @@ class Symmetry(object):
                         symOp.append(RS)
         return symOp, symTr
 
-    def genSym(self,sym):
+    def generate_symmetry(self,sym):
         """
         Read in spacegoup generators from file
 
@@ -103,7 +104,7 @@ class Symmetry(object):
         symTr = symTr[:, 0:nOp+1]
         return symOp, symTr, symStr
 
-    def symOrder(self,R, T):
+    def symmetry_order(self,R, T):
         """
         Determine order of symmetry operator
 
@@ -124,7 +125,7 @@ class Symmetry(object):
 
         return N
 
-    def genPos(self, r):
+    def generate_positions(self, r):
         """
         Generate symmetry-equivalent positions
 
@@ -138,21 +139,21 @@ class Symmetry(object):
 
         return rPos, isMoved
 
-    def pointSym(self, r):
+    def point_symmetry(self, r):
         """
         Generate point group symmetry operations
 
         :param r:
         :return: pointOp:
         """
-        _, isMoved = self.genPos(r)
+        _, isMoved = self.generate_positions(r)
 
         opArray = np.asarray(self.symOp)
         pointOp = opArray[np.logical_not(isMoved)]
 
         return pointOp
 
-    def genTensor(self, r, q):
+    def generate_tensor(self, r, q):
         """
         Generate ATS scattering tensor
 
@@ -163,8 +164,8 @@ class Symmetry(object):
 
         anisoT = np.ones(shape=(3, 3)) - np.identity(3)
 
-        b = np.exp(2j * np.pi * np.einsum('i,ji->j', q, (self.symTr + np.dot(self.symOp, r))))
-        a = np.einsum('mij,jk,mlk->mil', self.symOp, anisoT, self.symOp)
+        b  = np.exp(2j * np.pi * np.einsum('i,ji->j', q, (self.symTr + np.dot(self.symOp, r))))
+        a  = np.einsum('mij,jk,mlk->mil', self.symOp, anisoT, self.symOp)
         Fk = np.einsum('ijk,i->jk', a, b)
 
         self.chop(Fk)

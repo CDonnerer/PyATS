@@ -40,7 +40,7 @@ class Diffract(object):
 
         return np.dot(Ru3, T)
 
-    def dspace(self,Q):
+    def dspacing(self,Q):
         """
         Evaluate d-spacing of reflection
 
@@ -53,7 +53,7 @@ class Diffract(object):
         return d
 
     def th(self, Q):
-        d = self.dspace(Q)
+        d = self.dspacing(Q)
 
         with warnings.catch_warnings():
             warnings.filterwarnings('error')
@@ -63,7 +63,7 @@ class Diffract(object):
     def tth(self,Q):
         return 2.0*self.th(Q)
 
-    def xrmsTensor(self, M):
+    def xrms_tensor(self, M):
         """
         Calculate XRMS tensor in spherical approximation
 
@@ -75,16 +75,16 @@ class Diffract(object):
 
     # ----- Absorption corrections ----- #
 
-    def calcAbs(self, Q, psi):
+    def calc_absorption(self, Q, psi):
         th = self.th(Q)
-        delta = self.calcDelta(Q, psi)
+        delta = self.calc_delta(Q, psi)
         alpha = th - delta
         beta  = th + delta
         abs   = (1 + np.sin(alpha) / np.sin(beta)) ** -1
 
         return abs, alpha, beta
 
-    def calcDelta(self, Q, psi):
+    def calc_delta(self, Q, psi):
         T = self.orientate(Q)   # crystal orienation in diffraction frame
         a = np.dot(T,self.n)
         delta = np.zeros(len(psi))
@@ -109,7 +109,7 @@ class Diffract(object):
 
     # ----- Azi scan of tensor scattering ----- #
 
-    def jonesMatrix(self,F,th,psi):
+    def jones_matrix(self,F,th,psi):
         sig = np.array([np.sin(psi), np.cos(psi), 0])
         sigp = np.array([np.sin(psi), np.cos(psi), 0])
         pi = np.array([np.sin(th) * np.cos(psi), -np.sin(th) * np.sin(psi), -np.cos(th)])
@@ -119,7 +119,7 @@ class Diffract(object):
                       [np.dot(pi,  F.dot(sigp)), np.dot(pi,  F.dot(pip))]])
         return m
 
-    def aziScan(self, F, Q, absorb=False):
+    def azimuthal_scan(self, F, Q, absorb=False):
         psi = np.arange(0,360,1)
         T = self.orientate(Q)             # crystal orienation in diffraction frame
         diffT = np.dot(T, np.dot(F, T.T)) # project tensor into diffraction frame
@@ -127,24 +127,30 @@ class Diffract(object):
 
         absCorr = np.ones(len(psi))
         if(absorb):
-            absCorr, _ , _ = self.calcAbs(Q, psi)
+            absCorr, _ , _ = self.calc_absorption(Q, psi)
 
-        M = self.jonesMatrix(diffT, th, np.deg2rad(psi))
+        M = self.jones_matrix(diffT, th, np.deg2rad(psi))
 
-        Fs = np.einsum('i,ijm,j->m', self.pol, M, [1,0])
-        Fp = np.einsum('i,ijm,j->m', self.pol, M, [0,1])
+        Fss = np.einsum('i,ijm,j->m', [1,0], M, [1,0])
+        Fsp = np.einsum('i,ijm,j->m', [1,0], M, [0,1])
 
-        pl.plot(psi, np.abs(Fs)**2, '-b')
-        pl.plot(psi, np.abs(Fp)**2, '-r')
+        Fps = np.einsum('i,ijm,j->m', [0,1], M, [1,0])
+        Fpp = np.einsum('i,ijm,j->m', [0,1], M, [0,1])
+
+        #pl.plot(psi, np.abs(Fs)**2, '-b')
+        #pl.plot(psi, np.abs(Fp)**2, '-r')
+
+        pl.plot(psi, np.abs(Fps+Fpp) ** 2, '-r')
+        pl.plot(psi, np.abs(Fss+Fsp) ** 2, '-b')
 
         pl.title('Q = ' + str(Q) + ', $\psi_0$ = ' + str(self.azir))
         pl.xlabel('$\psi$ (deg)')
         pl.ylabel('Intensity (arb. u.)')
         pl.show()
 
-
     # ----- Powder diffraction ----- #
     # Experimental!
+    # And pretty shit
 
     def genReflections(self,n):
         tol = 1e-8
