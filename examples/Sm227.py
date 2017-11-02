@@ -11,7 +11,6 @@ rTemp = (np.dot(Sm227.Symmetry.symOp, r) + Sm227.Symmetry.symTr) % 1
 
 #T = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 0.5]])
 
-
 #b = np.exp(2j * np.pi * np.einsum('i,ji->j', q, (Sm227.Symmetry.symTr + np.dot(Sm227.Symmetry.symOp, r))))
 #a = np.einsum('mij,jk,mlk->mil', Sm227.Symmetry.symOp, T, Sm227.Symmetry.symOp)
 #Fk = np.einsum('ijk,i->jk', a, b)

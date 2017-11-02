@@ -10,3 +10,8 @@ Compute REXS cross-sections:
 * Non-resonant magnetic x-ray scattering tensor
 * Crystal orientation for arbitrary scattering vector and azimuth
 * Azimuthal scans, etc.
+
+Computer non-resonant XRD:
+
+* Single crystal diffraction
+* Simulate powder pattern

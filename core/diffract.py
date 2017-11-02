@@ -1,5 +1,6 @@
 import warnings
-import pylab as pl
+from matplotlib import pyplot as plt
+
 import numpy as np
 import pandas as pd
 from core.lattice import *
@@ -156,13 +157,13 @@ class Diffract(object):
         #pl.plot(psi, np.abs(Fs)**2, '-b')
         #pl.plot(psi, np.abs(Fp)**2, '-r')
 
-        pl.plot(psi, np.abs(Fps+Fpp) ** 2, '-r')
-        pl.plot(psi, np.abs(Fss+Fsp) ** 2, '-b')
+        plt.plot(psi, np.abs(Fps+Fpp) ** 2, '-r')
+        plt.plot(psi, np.abs(Fss+Fsp) ** 2, '-b')
 
-        pl.title('Q = ' + str(Q) + ', $\psi_0$ = ' + str(self.azir))
-        pl.xlabel('$\psi$ (deg)')
-        pl.ylabel('Intensity (arb. u.)')
-        pl.show()
+        plt.title('Q = ' + str(Q) + ', $\psi_0$ = ' + str(self.azir))
+        plt.xlabel('$\psi$ (deg)')
+        plt.ylabel('Intensity (arb. u.)')
+        plt.show()
 
     # ----- Powder diffraction ----- #
     # still experimental
@@ -179,31 +180,33 @@ class Diffract(object):
         d_min = 0.5 * self.lam
         qs = qs[dspacings > d_min]
         ds = dspacings[dspacings > d_min]
+        tths = 2*np.arcsin(self.lam / (2.0*ds))
 
         # structure factor cutoff
-        sfs  = np.zeros(len(qs))
+        int  = np.zeros(len(qs))
 
         for i, q in enumerate(qs):
-            sfs[i] = np.abs(np.sum(self.lat.generate_structure_factor(q)))
+            sfs = self.lat.generate_structure_factor(q)
+            comp_int = 0
 
-        qs = qs[sfs > TOL]
-        sfs = sfs[sfs > TOL]
+            for j, f in enumerate(sfs):
+                if abs(f) < TOL:
+                    continue
+                else:
+                    fofa = self.lat.atom[j].formfactor(2.0*ds[i])
+                    comp_int += f * fofa
+
+            #if (abs(comp_int[i]) > TOL):
+            #    LP = (1 + np.cos(tths[i]) ** 2) / (8 * np.sin(0.5*tths[i]) ** 2 * np.cos(0.5*tths[i]))
+            int[i] = np.absolute(comp_int)
+
+        tths = tths[int > TOL]
+        qs  = qs[int > TOL]
+        int = int[int > TOL]
 
         # formfactors, hkl downconversion for multiples
 
-        #    for j, f in enumerate(SF):
-        # if(abs(f) < 1e-10):
-        #        continue
-        #    fofa = self.lat.atom[i].formfac(np.sin(th) / self.lam)
-        #    int += f * fofa
-        # if (abs(int) > 1e-6):
-        #    LP = (1 + np.cos(tth) ** 2) / (8 * np.sin(th) ** 2 * np.cos(th))
-        #    ref.append([np.rad2deg(tth), [h, k, l], 1, 1 * LP * np.absolute(int) ** 2])
-
-
-        tths = 2*np.arcsin(self.lam / (2.0*ds))
-
-        return np.rad2deg(tths), qs, sfs
+        return np.rad2deg(tths), qs, int**2
 
 
         #tol = 1e-8
@@ -239,18 +242,19 @@ class Diffract(object):
         #return qs #sorted(ref)
 
     def powder(self):
-        tth, q, sf = self.generate_reflections(30)
+        tth, q, sf = self.generate_reflections(18)
 
-        x=np.arange(0,180,.05)
+        x=np.arange(0,90,.05)
         y=np.zeros_like(x)
 
         for t,s in zip(tth, sf):
-            y += self.lorz(x,s,t,.05)
+            y += self.lorz(x,1,t,.05)
 
-        pl.plot(x,y)
-        pl.xlabel('2 theta (deg)')
-        pl.ylabel('Intensity (arb. u.)')
-        pl.show()
+        plt.figure(figsize=(16, 8))
+        plt.plot(x,y)
+        plt.xlabel('2 theta (deg)')
+        plt.ylabel('Intensity (arb. u.)')
+        plt.show()
 
     def lorz(self,x,a,c,w):
         L = a*w / ( (x-c)**2 + w**2 )
