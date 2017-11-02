@@ -1,4 +1,5 @@
 import os
+import io
 import numpy as np
 
 class Atom(object):
@@ -11,7 +12,7 @@ class Atom(object):
         self.element = element
         self.wpos = wpos
         self.pos  = rpos
-        self.a, self.b, self.c = self.read_formfactor()  # form factor
+        self.a, self.b, self.c = self.read_formfactor()
 
     def __repr__(self):
         n = len(self.pos)
@@ -20,22 +21,26 @@ class Atom(object):
 
     def read_formfactor(self):
         """
-        read-in atomic form factor from file
+        Read-in atomic form factor parameters from file
 
         :return:
         """
         fn = os.path.join(os.path.dirname(__file__), 'dat_files' + os.sep + 'formfactor.dat')
-        f = open(fn, 'r')
+
+        # TODO: check file. works for Python 2,3 c.f. symmetry
+        f = io.open(fn, mode="r", encoding="utf-8")
+        #f = open(fn, 'r')
 
         for line in f:
             if self.element in line:
-                ffStr = line[0:]
+                ff_str = line[0:]
                 break
         f.close()
 
         a = np.zeros(4)
         b = np.zeros(4)
-        tokens = ffStr.split()
+        tokens = ff_str.split()
+
         j = 1
         for i in range(0, 4):
             a[i] = tokens[j]

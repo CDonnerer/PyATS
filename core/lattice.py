@@ -98,6 +98,7 @@ class Lattice(object):
         """
         if(np.sum(Q)==0):
             return None
+
         F = np.zeros(len(self.atom),'complex128')
 
         for i, at in enumerate(self.atom):

@@ -1,7 +1,7 @@
 import warnings
 import pylab as pl
 import numpy as np
-from core.sigpiBasis import *
+import pandas as pd
 from core.lattice import *
 
 class Diffract(object):
@@ -16,7 +16,7 @@ class Diffract(object):
 
     def orientate(self, Q):
         """
-        computes tensor that projects crystal frame onto diffraction frame
+        Computes tensor that projects crystal frame onto diffraction frame
 
         :param Q:
         :return:
@@ -47,12 +47,22 @@ class Diffract(object):
         :param Q: wavevector
         :return: d-spacing
         """
+
+        if(len(np.ravel(Q)) == 3):
+            Q = Q.reshape(1,3)
+
         #TODO generalise to triclinc symmetry
-        gg = (Q[0] / self.lat.a)**2 + (Q[1] / self.lat.b)**2 + (Q[2] / self.lat.c)**2
+        gg = (Q[:,0] / self.lat.a)**2 + (Q[:,1] / self.lat.b)**2 + (Q[:,2] / self.lat.c)**2
         d = np.sqrt(1 / gg)
         return d
 
     def th(self, Q):
+        """
+        Calculate theta of reflection Q
+
+        :param Q: in [h,k,l]
+        :return: theta in radians
+        """
         d = self.dspacing(Q)
 
         with warnings.catch_warnings():
@@ -61,6 +71,12 @@ class Diffract(object):
         return th
 
     def tth(self,Q):
+        """
+        Calculate two-theta of reflection Q
+
+        :param Q: in [h,k,l]
+        :return: two-theta in radians
+        """
         return 2.0*self.th(Q)
 
     def xrms_tensor(self, M):
@@ -149,48 +165,87 @@ class Diffract(object):
         pl.show()
 
     # ----- Powder diffraction ----- #
-    # Experimental!
-    # And pretty shit
+    # still experimental
 
-    def genReflections(self,n):
-        tol = 1e-8
-        ref = []
-        qs  = []
-        qs.append([0,0,0])
-        for h in range(0,n):
-            for k in range(n):
-                for l in range(n):
-                    try:
-                        tth = self.tth([h,k,l])
-                        th = 0.5 * tth
+    def generate_reflections(self,n):
+        TOL = 1e-8
+
+        # generate all possible reflections up to [n,n,n]
+        h = np.linspace(0,n,n+1)
+        qs = np.array(np.meshgrid(h, h, h)).T.reshape(-1, 3)[1:] # exclude (0,0,0)
+        dspacings = self.dspacing(qs)
+
+        # dspacing cutoff
+        d_min = 0.5 * self.lam
+        qs = qs[dspacings > d_min]
+        ds = dspacings[dspacings > d_min]
+
+        # structure factor cutoff
+        sfs  = np.zeros(len(qs))
+
+        for i, q in enumerate(qs):
+            sfs[i] = np.abs(np.sum(self.lat.generate_structure_factor(q)))
+
+        qs = qs[sfs > TOL]
+        sfs = sfs[sfs > TOL]
+
+        # formfactors, hkl downconversion for multiples
+
+        #    for j, f in enumerate(SF):
+        # if(abs(f) < 1e-10):
+        #        continue
+        #    fofa = self.lat.atom[i].formfac(np.sin(th) / self.lam)
+        #    int += f * fofa
+        # if (abs(int) > 1e-6):
+        #    LP = (1 + np.cos(tth) ** 2) / (8 * np.sin(th) ** 2 * np.cos(th))
+        #    ref.append([np.rad2deg(tth), [h, k, l], 1, 1 * LP * np.absolute(int) ** 2])
+
+
+        tths = 2*np.arcsin(self.lam / (2.0*ds))
+
+        return np.rad2deg(tths), qs, sfs
+
+
+        #tol = 1e-8
+        #ref = []
+        #qs  = []
+        #qs.append([0,0,0])
+        #for h in range(0,n):
+        #    for k in range(n):
+        #        for l in range(n):
+        #            try:
+        #                tth = self.tth([h,k,l])
+        #                th = 0.5 * tth
                         # m, qeq = self.lat.qMult([h, k, l])
                         # truth = []
                         # for r in qeq:
                         #    truth.append(any(np.sum(abs(np.asarray(r) - np.asarray(qs)), 1) < tol))
-                        if(True): #not any(truth)):
-                            qs.append([h,k,l])
+         #               if(True): #not any(truth)):
+         #                   qs.append([h,k,l])
                             #truth.clear()
 
-                            SF = self.lat.genSF([h, k, l])
-                            int = 0
-                            for i, f in enumerate(SF):
-                                if(abs(f) < 1e-10):
-                                    continue
-                                fofa = self.lat.atom[i].formfac(np.sin(th) / self.lam)
-                                int += f * fofa
-                            if (abs(int) > 1e-6):
-                                LP = (1 + np.cos(tth) ** 2) / (8 * np.sin(th) ** 2 * np.cos(th))
-                                ref.append([np.rad2deg(tth), [h, k, l], 1, 1 * LP * np.absolute(int) ** 2])
-                    except:
-                        continue
-        return sorted(ref)
+                            #SF = self.lat.genSF([h, k, l])
+                            #int = 0
+                            #for i, f in enumerate(SF):
+                            #    if(abs(f) < 1e-10):
+                            #        continue
+                            #    fofa = self.lat.atom[i].formfac(np.sin(th) / self.lam)
+                            #    int += f * fofa
+                            #if (abs(int) > 1e-6):
+                            #    LP = (1 + np.cos(tth) ** 2) / (8 * np.sin(th) ** 2 * np.cos(th))
+                            #    ref.append([np.rad2deg(tth), [h, k, l], 1, 1 * LP * np.absolute(int) ** 2])
+         #           except:
+         #               continue
+        #return qs #sorted(ref)
 
     def powder(self):
-        reflex = self.genReflections(30)
-        x=np.arange(0,120,.05)
+        tth, q, sf = self.generate_reflections(30)
+
+        x=np.arange(0,180,.05)
         y=np.zeros_like(x)
-        for r in reflex:
-            y += self.lorz(x,r[3],r[0],.05)
+
+        for t,s in zip(tth, sf):
+            y += self.lorz(x,s,t,.05)
 
         pl.plot(x,y)
         pl.xlabel('2 theta (deg)')
