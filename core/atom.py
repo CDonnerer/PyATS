@@ -51,5 +51,8 @@ class Atom(object):
         return a, b, c
 
     def formfactor(self, sinThetaOverLam):
-        ff = (self.a * np.exp(-self.b * (sinThetaOverLam ** 2))).sum() + self.c
+
+        bdsquare = np.exp(np.outer(-self.b,sinThetaOverLam ** 2))
+        ff = np.einsum('i,ij->j',self.a,bdsquare)+self.c
+
         return ff

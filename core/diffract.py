@@ -171,84 +171,51 @@ class Diffract(object):
     def generate_reflections(self,n):
         TOL = 1e-8
 
-        # generate all possible reflections up to [n,n,n]
-        h = np.linspace(0,n,n+1)
-        qs = np.array(np.meshgrid(h, h, h)).T.reshape(-1, 3)[1:] # exclude (0,0,0)
+        # generate all possible reflections up to (n,n,n)
+        h = np.linspace(-n,n,2*n+1)
+        qs = np.array(np.meshgrid(h, h, h)).T.reshape(-1, 3)
+        qs = qs[(qs != 0).any(axis=1)] # exclude (0,0,0)
         dspacings = self.dspacing(qs)
 
         # dspacing cutoff
         d_min = 0.5 * self.lam
         qs = qs[dspacings > d_min]
         ds = dspacings[dspacings > d_min]
-        tths = 2*np.arcsin(self.lam / (2.0*ds))
+        ds_inverse = 1 / (2.0*ds)
 
-        # structure factor cutoff
-        int  = np.zeros(len(qs))
-
+        # structure factor cutoff: currently slowest part
+        sfs  = np.zeros( (len(qs),len(self.lat.atom)),'complex128' )
         for i, q in enumerate(qs):
-            sfs = self.lat.generate_structure_factor(q)
-            comp_int = 0
+            sfs[i] = self.lat.generate_structure_factor(np.abs(q))
 
-            for j, f in enumerate(sfs):
-                if abs(f) < TOL:
-                    continue
-                else:
-                    fofa = self.lat.atom[j].formfactor(2.0*ds[i])
-                    comp_int += f * fofa
+        # form factors
+        for i, a in enumerate(self.lat.atom):
+            fofa = a.formfactor(ds_inverse)
+            sfs[:,i] *= fofa
+        sf = np.abs(np.sum(sfs,axis=1))**2
 
-            #if (abs(comp_int[i]) > TOL):
-            #    LP = (1 + np.cos(tths[i]) ** 2) / (8 * np.sin(0.5*tths[i]) ** 2 * np.cos(0.5*tths[i]))
-            int[i] = np.absolute(comp_int)
+        is_allowed = sf > TOL
+        tths = 2*np.arcsin(self.lam * ds_inverse[is_allowed])
+        qs = qs[is_allowed]
+        sf = sf[is_allowed]
 
-        tths = tths[int > TOL]
-        qs  = qs[int > TOL]
-        int = int[int > TOL]
+        # Lorentz polarisation factor
+        LP = (1 + np.cos(tths) ** 2) / (8 * np.sin(0.5 * tths)**2 * np.cos(0.5 * tths))
+        sf *= LP
 
-        # formfactors, hkl downconversion for multiples
+        # TODO: unique values
+        # use np.unique to sum over multiplicities
 
-        return np.rad2deg(tths), qs, int**2
-
-
-        #tol = 1e-8
-        #ref = []
-        #qs  = []
-        #qs.append([0,0,0])
-        #for h in range(0,n):
-        #    for k in range(n):
-        #        for l in range(n):
-        #            try:
-        #                tth = self.tth([h,k,l])
-        #                th = 0.5 * tth
-                        # m, qeq = self.lat.qMult([h, k, l])
-                        # truth = []
-                        # for r in qeq:
-                        #    truth.append(any(np.sum(abs(np.asarray(r) - np.asarray(qs)), 1) < tol))
-         #               if(True): #not any(truth)):
-         #                   qs.append([h,k,l])
-                            #truth.clear()
-
-                            #SF = self.lat.genSF([h, k, l])
-                            #int = 0
-                            #for i, f in enumerate(SF):
-                            #    if(abs(f) < 1e-10):
-                            #        continue
-                            #    fofa = self.lat.atom[i].formfac(np.sin(th) / self.lam)
-                            #    int += f * fofa
-                            #if (abs(int) > 1e-6):
-                            #    LP = (1 + np.cos(tth) ** 2) / (8 * np.sin(th) ** 2 * np.cos(th))
-                            #    ref.append([np.rad2deg(tth), [h, k, l], 1, 1 * LP * np.absolute(int) ** 2])
-         #           except:
-         #               continue
-        #return qs #sorted(ref)
+        return np.rad2deg(tths), qs, sf
 
     def powder(self):
-        tth, q, sf = self.generate_reflections(18)
+        tth, q, sf = self.generate_reflections(20)
 
         x=np.arange(0,90,.05)
         y=np.zeros_like(x)
 
         for t,s in zip(tth, sf):
-            y += self.lorz(x,1,t,.05)
+            y += self.lorz(x,s,t,.05)
 
         plt.figure(figsize=(16, 8))
         plt.plot(x,y)
