@@ -1,6 +1,5 @@
 import warnings
 from matplotlib import pyplot as plt
-
 import numpy as np
 import pandas as pd
 from core.lattice import *
@@ -172,7 +171,7 @@ class Diffract(object):
         TOL = 1e-8
 
         # generate all possible reflections up to (n,n,n)
-        h = np.linspace(-n,n,2*n+1)
+        h = np.linspace(n,-n,2*n+1,dtype=np.int16)
         qs = np.array(np.meshgrid(h, h, h)).T.reshape(-1, 3)
         qs = qs[(qs != 0).any(axis=1)] # exclude (0,0,0)
         dspacings = self.dspacing(qs)
@@ -183,10 +182,8 @@ class Diffract(object):
         ds = dspacings[dspacings > d_min]
         ds_inverse = 1 / (2.0*ds)
 
-        # structure factor cutoff: currently slowest part
-        sfs  = np.zeros( (len(qs),len(self.lat.atom)),'complex128' )
-        for i, q in enumerate(qs):
-            sfs[i] = self.lat.generate_structure_factor(np.abs(q))
+        # structure factor
+        sfs = self.lat.generate_structure_factor(np.abs(qs)) # gives nans without abs? check
 
         # form factors
         for i, a in enumerate(self.lat.atom):
@@ -194,7 +191,7 @@ class Diffract(object):
             sfs[:,i] *= fofa
         sf = np.abs(np.sum(sfs,axis=1))**2
 
-        is_allowed = sf > TOL
+        is_allowed = np.abs(sf) > TOL
         tths = 2*np.arcsin(self.lam * ds_inverse[is_allowed])
         qs = qs[is_allowed]
         sf = sf[is_allowed]
@@ -203,18 +200,28 @@ class Diffract(object):
         LP = (1 + np.cos(tths) ** 2) / (8 * np.sin(0.5 * tths)**2 * np.cos(0.5 * tths))
         sf *= LP
 
-        # TODO: unique values
-        # use np.unique to sum over multiplicities
+        # Only unique reflections
+        tth, idx, m = np.unique(tths, return_index=True, return_counts=True)
+        hkl = qs[idx]
+        int = m*sf[idx]
+        int *= 100.0/max(int)
 
-        return np.rad2deg(tths), qs, sf
+        df = pd.DataFrame(data={'tth': np.rad2deg(tth),
+                           'h': hkl[:, 0], 'k': hkl[:, 1], 'l': hkl[:, 2],
+                           'm': m, 'int': int},
+                          columns=['tth','h','k','l','m','int'])
+        return df
 
-    def powder(self):
-        tth, q, sf = self.generate_reflections(20)
+    def powder(self, n=20):
+        df = self.generate_reflections(20)
+
+        tth = np.asarray(df.tth)
+        int = np.asarray(df.int)
 
         x=np.arange(0,90,.05)
         y=np.zeros_like(x)
 
-        for t,s in zip(tth, sf):
+        for t,s in zip(tth, int):
             y += self.lorz(x,s,t,.05)
 
         plt.figure(figsize=(16, 8))

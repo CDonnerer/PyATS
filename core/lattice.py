@@ -99,10 +99,14 @@ class Lattice(object):
         if(np.sum(Q)==0):
             return None
 
-        F = np.zeros(len(self.atom),'complex128')
+        F = np.zeros((len(Q), len(self.atom)), 'complex128')
 
         for i, at in enumerate(self.atom):
-            F[i] = self.chop( (np.exp(2j*np.pi*np.einsum('j,ij->i', Q, at.pos))).sum(0) )
+            s = np.inner(Q, at.pos)
+            F[:, i] = np.sum(np.exp(2j*np.pi*s),axis=1)
+
+            # = self.chop( (np.exp(2j*np.pi*np.einsum('j,ij->ij', Q, at.pos))).sum(0) )
+
         return F
 
     # helper function to get rid of numerical errors
