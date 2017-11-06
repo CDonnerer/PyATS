@@ -49,7 +49,7 @@ class Diffract(object):
         """
 
         if(len(np.ravel(Q)) == 3):
-            Q = Q.reshape(1,3)
+            Q = np.asarray(Q).reshape(1,3)
 
         #TODO generalise to triclinc symmetry
         gg = (Q[:,0] / self.lat.a)**2 + (Q[:,1] / self.lat.b)**2 + (Q[:,2] / self.lat.c)**2
@@ -135,34 +135,38 @@ class Diffract(object):
                       [np.dot(pi,  F.dot(sigp)), np.dot(pi,  F.dot(pip))]])
         return m
 
-    def azimuthal_scan(self, F, Q, absorb=False):
+    def azimuthal_scan(self, F, Q, plot=True, absorb=False):
         psi = np.arange(0,360,1)
         T = self.orientate(Q)             # crystal orienation in diffraction frame
         diffT = np.dot(T, np.dot(F, T.T)) # project tensor into diffraction frame
         th = self.th(Q)
 
-        absCorr = np.ones(len(psi))
+        abs_correction = np.ones(len(psi))
         if(absorb):
-            absCorr, _ , _ = self.calc_absorption(Q, psi)
+            abs_correction, _ , _ = self.calc_absorption(Q, psi) # check this
 
         M = self.jones_matrix(diffT, th, np.deg2rad(psi))
 
-        Fss = np.einsum('i,ijm,j->m', [1,0], M, [1,0])
-        Fsp = np.einsum('i,ijm,j->m', [1,0], M, [0,1])
+        Fs = np.einsum('i,ijm,j->m', self.pol, M, [1,0])
+        Fp = np.einsum('i,ijm,j->m', self.pol, M, [0,1])
 
-        Fps = np.einsum('i,ijm,j->m', [0,1], M, [1,0])
-        Fpp = np.einsum('i,ijm,j->m', [0,1], M, [0,1])
+        if(plot):
+            plt.figure(figsize=(16, 8))
 
-        #pl.plot(psi, np.abs(Fs)**2, '-b')
-        #pl.plot(psi, np.abs(Fp)**2, '-r')
+            plt.plot(psi, np.abs(Fs) ** 2, '-b')
+            plt.plot(psi, np.abs(Fp) ** 2, '-r')
+            plt.plot(psi, np.abs(Fp) ** 2 + np.abs(Fs) ** 2, '-k')
 
-        plt.plot(psi, np.abs(Fps+Fpp) ** 2, '-r')
-        plt.plot(psi, np.abs(Fss+Fsp) ** 2, '-b')
+            plt.title('Q = ' + str(Q) + ', $\psi_0$ = ' + str(self.azir))
+            plt.xlabel('$\psi$ (deg)')
+            plt.ylabel('Intensity (arb. u.)')
+            plt.legend(['$\sigma \sigma^\prime$','$\sigma \pi$','sum'])
+            plt.show()
 
-        plt.title('Q = ' + str(Q) + ', $\psi_0$ = ' + str(self.azir))
-        plt.xlabel('$\psi$ (deg)')
-        plt.ylabel('Intensity (arb. u.)')
-        plt.show()
+        df = pd.DataFrame(data={'azi': psi,
+                           'Fs': Fs, 'Fp': Fp},
+                          columns=['azi','Fs','Fp'])
+        return df
 
     # ----- Powder diffraction ----- #
     # still experimental
@@ -231,5 +235,5 @@ class Diffract(object):
         plt.show()
 
     def lorz(self,x,a,c,w):
-        L = a*w / ( (x-c)**2 + w**2 )
+        L = a*w**2 / ( (x-c)**2 + w**2 )
         return L

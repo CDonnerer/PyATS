@@ -1,17 +1,25 @@
 # PyATS
+
 PyATS: Calculate ATS cross-sections based on crystal symmetries
 
-## Features ##
+## Examples
+
+* [REXS of Sm2Ir2O7](Sm227_rexs.ipynb) with ATS and magnetic tensors
+
+* [Powder XRD of CsCl](CsCl_powder.ipynb)
+
+[I'm an inline-style link](https://www.google.com)
+
+## Feature list ##
 
 Compute REXS cross-sections:
 
 * ATS tensor from symmetries
 * Resonant magnetic x-ray scattering tensor (using spherical approximation)
 * Non-resonant magnetic x-ray scattering tensor
-* Crystal orientation for arbitrary scattering vector and azimuth
-* Azimuthal scans, etc.
+* Absorption corrections for different surface
 
 Computer non-resonant XRD:
 
-* Single crystal diffraction
-* Simulate powder pattern
+* Single crystal diffraction intensities
+* Powder patterns
