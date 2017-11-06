@@ -6,7 +6,7 @@ PyATS: Calculate ATS cross-sections based on crystal symmetries
 
 * [REXS of Sm2Ir2O7](Sm227_rexs.ipynb) with ATS and magnetic tensors
 
-* [Powder XRD of CsCl](CsCl_powder.ipynb)
+* [Powder XRD of CsCl](CsCl_powder_xrd.ipynb)
 
 ## Feature list ##
 
