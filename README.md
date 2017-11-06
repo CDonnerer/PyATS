@@ -8,8 +8,6 @@ PyATS: Calculate ATS cross-sections based on crystal symmetries
 
 * [Powder XRD of CsCl](CsCl_powder.ipynb)
 
-[I'm an inline-style link](https://www.google.com)
-
 ## Feature list ##
 
 Compute REXS cross-sections:
